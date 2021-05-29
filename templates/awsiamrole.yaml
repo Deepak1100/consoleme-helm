@@ -1,0 +1,8 @@
+{{- if ne .Values.iamRole "" -}}
+apiVersion: zalando.org/v1
+kind: AWSIAMRole
+metadata:
+  name: {{ include "consoleme.fullname" . }}
+spec:
+  roleReference: {{ .Values.iamRole }}
+{{- end }}

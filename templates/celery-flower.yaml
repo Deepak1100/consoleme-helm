@@ -1,0 +1,83 @@
+{{- if .Values.celeryFlower.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "consoleme.fullname" . }}-celery-flower
+  labels:
+    {{- include "consoleme.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.celeryFlower.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "consoleme.selectorLabels" . | nindent 6 }}
+      app: {{ include "consoleme.fullname" . }}-celery-flower
+  template:
+    metadata:
+      labels:
+        {{- include "consoleme.selectorLabels" . | nindent 8 }}
+        app: {{ include "consoleme.fullname" . }}-celery-flower
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "consoleme.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-celery-flower
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          - name: CONFIG_LOCATION
+            value: /apps/consoleme/configs/oidc_all_in_one.yaml
+          - name: EC2_REGION
+            value: ap-south-1          
+          volumeMounts:
+          - name: config-volume
+            mountPath: /apps/consoleme/configs
+          - name: secret-volume
+            mountPath: /apps/consoleme/secrets
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["bash", "-c"]
+          args: ["pip install flower && celery -A consoleme.celery_tasks.celery_tasks flower"]
+          ports:
+            - name: http
+              containerPort: 5555
+              protocol: TCP          
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.celeryFlower.resources | nindent 12 }}
+      {{- with .Values.celeryFlower.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.celeryFlower.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.celeryFlower.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "consoleme.fullname" . }}
+      - name: secret-volume
+        secret:
+          secretName: "{{ include "consoleme.fullname" . }}-secret"
+          defaultMode: 0755
+{{- end }}

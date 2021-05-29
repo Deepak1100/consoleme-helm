@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "consoleme.fullname" . }}-celery-worker
+  labels:
+    {{- include "consoleme.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.celeryWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "consoleme.selectorLabels" . | nindent 6 }}
+      app: {{ include "consoleme.fullname" . }}-celery-worker
+  template:
+    metadata:
+      labels:
+        {{- include "consoleme.selectorLabels" . | nindent 8 }}
+        app: {{ include "consoleme.fullname" . }}-celery-worker
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "consoleme.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-celery-worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          - name: CONFIG_LOCATION
+            value: /apps/consoleme/configs/oidc_all_in_one.yaml
+          {{- if ne .Values.iamRole "" }}
+          - name: AWS_SHARED_CREDENTIALS_FILE
+            value: /meta/aws-iam/credentials.process
+          - name: AWS_CREDENTIAL_PROFILES_FILE
+            value: /meta/aws-iam/credentials  
+          {{- end }}
+          - name: EC2_REGION
+            value: ap-south-1          
+          volumeMounts:
+          - name: config-volume
+            mountPath: /apps/consoleme/configs
+          - name: secret-volume
+            mountPath: /apps/consoleme/secrets
+          {{- if ne .Values.iamRole "" }}
+          - mountPath: /meta/aws-iam
+            name: aws-iam-credentials
+            readOnly: true            
+          {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["bash", "-c"]
+          args: ["celery -A consoleme.celery_tasks.celery_tasks worker -l DEBUG -B -E --concurrency=16"]
+          readinessProbe:
+            exec:
+              command: [
+                "bash",
+                "-c",
+                "celery  -A consoleme.celery_tasks.celery_tasks inspect ping -d celery@$HOSTNAME"
+              ]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+          livenessProbe:
+            exec:
+              command: [
+                "bash",
+                "-c",
+                "celery -A consoleme.celery_tasks.celery_tasks inspect ping -d celery@$HOSTNAME"
+              ]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+          resources:
+            {{- toYaml .Values.celeryWorker.resources | nindent 12 }}
+      {{- with .Values.celeryWorker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.celeryWorker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.celeryWorker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "consoleme.fullname" . }}
+      - name: secret-volume
+        secret:
+          secretName: "{{ include "consoleme.fullname" . }}-secret"
+          defaultMode: 0755
+      {{- if ne .Values.iamRole "" }}
+      - name: aws-iam-credentials
+        secret:
+          defaultMode: 420
+          secretName: consoleme
+      {{- end}}

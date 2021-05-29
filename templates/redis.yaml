@@ -1,0 +1,51 @@
+{{- if .Values.redis.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "consoleme.fullname" . }}-redis
+  labels:
+    app: {{ include "consoleme.fullname" . }}-redis
+spec:
+  ports:
+  - port: 6379
+    protocol: TCP
+  selector:
+    app: {{ include "consoleme.fullname" . }}-redis
+  type: ClusterIP
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "consoleme.fullname" . }}-redis
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "consoleme.fullname" . }}-redis
+  serviceName: "{{ include "consoleme.fullname" . }}-redis"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ include "consoleme.fullname" . }}-redis
+    spec:
+      containers:
+      - name: redis
+        image: {{ .Values.redis.image.repository }}
+        command: ["redis-server", "--appendonly", "yes"]
+        ports:
+        - containerPort: 6379
+          name: web
+        volumeMounts:
+        - name: redis-aof
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-aof
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "gp2"
+      resources:
+        requests:
+          storage: 1Gi
+{{- end }}

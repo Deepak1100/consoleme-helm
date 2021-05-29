@@ -1,0 +1,146 @@
+# Default values for consoleme.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: consoleme
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: consoleme
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+  hosts:
+    - host: consoleme.abc.com
+      paths:
+        - "/*"
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 3
+    memory: 6Gi
+  requests:
+    cpu: 2
+    memory: 4Gi
+
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+
+celeryWorker:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 0.5
+      memory: 2Gi
+
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+celeryFlower:
+  enabled: true
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 0.5
+      memory: 2Gi
+    requests:
+      cpu: 0.1
+      memory: 0.2Gi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}  
+
+
+redis:
+  enabled: true
+  image:
+    repository: redis:6.0.13
+
+## it will use zolando iam controller
+iamRole: ""
+
+consolemeConfig:
+  aws:
+    issuer: MyOrg
+  url: https://consoleme.example.com
+  policies:
+    roleName: consoleme-target
+  applicationAdmin: consoleme-admin@example.com
+  oidc:
+    metadataUrl: https://example.okta.com/.well-known/openid-configuration
+  # base64 secrets file
+  secrets: b2lkY19zZWNyZXRzOgogIGNsaWVudF9pZDogdGVzdAogIHNlY3JldDogdGVzdAogIGNsaWVudF9zY29wZToKICAgIC0gZW1haWwKICAgIC0gcHJvZmlsZQogICAgLSBncm91cHMKICAgIC0gb3BlbmlkCg==
+  supportEmail: infra@example.com
+  groups:
+    canEditConfig:
+      - consoleme-admin@example.com
+    canAdminPolicies:
+      - consoleme-admin@example.com
+    canAdmin:
+      - consoleme-admin@example.com
+  ses:
+    arn: arn:aws:ses:ap-south-1:123456789012:identity/sysadmin@example.com
+    region: ap-south-1
+    sender: sysadmin@example.com
+  accountMapping: |-
+    "123456778901": nonprod
+    "234567891233": prod
