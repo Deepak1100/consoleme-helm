@@ -119,6 +119,7 @@ redis:
 iamRole: ""
 
 consolemeConfig:
+  region: ap-south-1
   aws:
     issuer: MyOrg
   url: https://consoleme.example.com

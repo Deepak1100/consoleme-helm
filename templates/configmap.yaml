@@ -92,11 +92,11 @@ data:
           - consoleme-authorized-cli-only
     aws:
       issuer: {{ .Values.consolemeConfig.issuer }}
-      region: "ap-south-1"
+      region: "{{ .Values.consolemeConfig.region }}"
     
     celery:
       # Some jobs should only run in one region. The `active_region` key should define your primary region.
-      active_region: ap-south-1
+      active_region: {{ .Values.consolemeConfig.region }}
     
     # If you want to retrieve credentials through mutual TLS, you'll need to use something fronting ConsoleMe to do the
     # certificate validation. It should pass down a "Success" header, and a header with the certificate. You'll need to
@@ -188,14 +188,14 @@ data:
 
     redis:
       host:
-        ap-south-1: {{ include "consoleme.fullname" . }}-redis
+        {{ .Values.consolemeConfig.region }}: {{ include "consoleme.fullname" . }}-redis
       db: 0
       port: 6379
 
     celery:
       broker_url: redis://{{ include "consoleme.fullname" . }}-redis:6379/1
       broker:
-        ap-south-1: redis://{{ include "consoleme.fullname" . }}-redis:6379/1
+        {{ .Values.consolemeConfig.region }}: redis://{{ include "consoleme.fullname" . }}-redis:6379/1
       backend:
-        ap-south-1: redis://{{ include "consoleme.fullname" . }}-redis:6379/2
+        {{ .Values.consolemeConfig.region }}: redis://{{ include "consoleme.fullname" . }}-redis:6379/2
       debug: true

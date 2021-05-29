@@ -40,7 +40,7 @@ spec:
             value: /meta/aws-iam/credentials  
           {{- end }}
           - name: EC2_REGION
-            value: ap-south-1          
+            value: {{ .Values.consolemeConfig.region }}
           volumeMounts:
           - name: config-volume
             mountPath: /apps/consoleme/configs
